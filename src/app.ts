@@ -1,16 +1,15 @@
 import express from "express";
 import dotenv from "dotenv";
 import { connectDB } from "./config/db";
-import router from "./routers";
+import { Router } from "express";
 dotenv.config();
-const app = express();
-app.use(express.json());
 connectDB();
-
-// route
-app.use("/api", router);
-
-
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
-});
+const app = express()
+console.log('s')
+app.get('/', (req, res) => {
+  res.send('Hello World')
+})
+console.log('sdafsdgfa')
+app.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000')
+})
