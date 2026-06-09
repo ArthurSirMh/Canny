@@ -8,4 +8,4 @@ const featuresSchema = new mongoose.Schema({
     image: { type: String, default:null },
 }, { timestamps: true },
 )
-const Feature = mongoose.model('User', featuresSchema)
+export const Feature = mongoose.model('User', featuresSchema)
