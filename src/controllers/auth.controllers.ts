@@ -3,6 +3,11 @@ import { User } from "../models/User";
 import argon2 from "argon2";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { Otp } from "../models/Otp";
+import { sendEmail } from "../services/email.service";
+import { email } from "zod";
+
 
 
 export const signUp = async (req: Request, res: Response) => {
@@ -12,7 +17,7 @@ export const signUp = async (req: Request, res: Response) => {
 
         if (checkUser) {
             res.send('user exist');
-            return 
+            return
         }
         const hashedPassword = await argon2.hash(password);
         const user = await User.create({
@@ -52,6 +57,55 @@ export const login = async (req: Request, res: Response) => {
     })
 }
 
+export const forgetPassword = async (req: Request, res: Response) => {
+    try {
+        const user = await User.findOne({ email: req.body.email })
+        if (!user) {
+            return res.send('user not found')
+        }
+        const otp = crypto.randomInt(100000, 999999).toString();
+        await Otp.create({
+            email: user.email,
+            otp: otp
+        })
+        sendEmail(user.email, 'Forget Password', `your code ${otp}\n this code expire in 2 min`)
+        return res.send('email sended')
+    } catch (err) {
+        console.log(err)
+        return res.send('Server Error')
+    }
+}
+
+
+
+
+export const changePassword = async (req: Request, res: Response) => {
+    try {
+        const otpRecord = await Otp.findOne({ otp: req.body.otp, email: req.body.email });
+        if (!otpRecord) {
+            return res.status(404).json({
+                message: "Invalid OTP",
+            });
+        }
+        const diff = Date.now() - otpRecord.createdAt.getTime();
+        if (diff > 2 * 60 * 1000) {
+            await otpRecord.deleteOne()
+            return res.status(400).json({
+                message: "OTP expired",
+            });
+        }
+        const user = await User.findOne({ email: otpRecord.email })
+        if (!user) return res.send('user not found')
+        const hashedPassword = await argon2.hash(req.body.password);
+        await user.updateOne({
+            password: hashedPassword
+        });
+        return res.send('password updated')
+    } catch (err) {
+        console.log(err)
+        return res.send('Server Error')
+    }
+}
 
 export const refreshToken = async (req: Request, res: Response) => {
     const token = req.cookies.refreshToken
@@ -60,7 +114,6 @@ export const refreshToken = async (req: Request, res: Response) => {
             Message: 'no refresh token'
         })
     }
-
     try {
         const decode = jwt.verify(
             token, process.env.JWT_REFRESH_SECRET as string

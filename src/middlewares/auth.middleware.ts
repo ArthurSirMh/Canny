@@ -18,7 +18,7 @@ export const auth = (req: Request, res: Response, next: NextFunction) => {
       process.env.JWT_ACCESS_SECRET as string
     );
 
-    req.user = decoded;
+    (req as any).user = decoded;
     next();
   } catch {
     return res.status(401).json({
